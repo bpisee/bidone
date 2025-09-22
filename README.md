@@ -12,7 +12,7 @@ A high-performance inventory management service built with Go and Echo framework
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/bpisee/bidone.git
 cd bidone/go
 
 # Initialize Go workspace (if needed)
