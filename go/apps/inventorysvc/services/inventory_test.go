@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/lee/BidOne/internal/store"
-	"github.com/lee/BidOne/pkg/model"
+	"github.com/lee/BidOne/apps/inventorysvc/store"
+	"github.com/lee/BidOne/shared/types/model"
 )
 
 func TestNewInventoryService(t *testing.T) {

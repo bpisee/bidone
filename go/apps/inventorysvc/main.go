@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/lee/BidOne/internal/services"
-	"github.com/lee/BidOne/internal/store"
+	"github.com/lee/BidOne/apps/inventorysvc/services"
+	"github.com/lee/BidOne/apps/inventorysvc/store"
 )
 
 func main() {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"github.com/lee/BidOne/pkg/model"
+	"github.com/lee/BidOne/shared/types/model"
 )
 
 // ListProductsResponse represents the response structure for listing products
@@ -28,9 +28,12 @@ type ListProductsRequest struct {
 
 // handleHealthCheck provides a simple health check endpoint
 func (s *Server) handleHealthCheck(c echo.Context) error {
+	c.Logger().Info("Health check requested")
+
 	// Record health check metric
 	s.BusinessMetrics.RecordServiceHealth(true, "api")
 
+	c.Logger().Debug("Health check completed successfully")
 	return c.JSON(http.StatusOK, map[string]string{
 		"status":  "healthy",
 		"service": "inventory-service",
@@ -40,8 +43,11 @@ func (s *Server) handleHealthCheck(c echo.Context) error {
 
 // handleMetrics handles GET /metrics - returns all collected metrics
 func (s *Server) handleMetrics(c echo.Context) error {
+	c.Logger().Info("Metrics requested")
+
 	metrics := s.MetricsCollector.GetMetrics()
 
+	c.Logger().Infof("Returning %d metrics", len(metrics))
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"metrics":   metrics,
 		"timestamp": time.Now(),
@@ -51,15 +57,21 @@ func (s *Server) handleMetrics(c echo.Context) error {
 
 // handleMetricsSummary handles GET /metrics/summary - returns metrics summary
 func (s *Server) handleMetricsSummary(c echo.Context) error {
+	c.Logger().Info("Metrics summary requested")
+
 	summary := s.MetricsCollector.GetMetricsSummary()
 
+	c.Logger().Debug("Metrics summary generated successfully")
 	return c.JSON(http.StatusOK, summary)
 }
 
 // handleMetricsReset handles POST /metrics/reset - resets all metrics
 func (s *Server) handleMetricsReset(c echo.Context) error {
+	c.Logger().Warn("Metrics reset requested - all metrics will be cleared")
+
 	s.MetricsCollector.Reset()
 
+	c.Logger().Info("All metrics have been reset successfully")
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message":   "Metrics reset successfully",
 		"timestamp": time.Now(),
@@ -68,10 +80,13 @@ func (s *Server) handleMetricsReset(c echo.Context) error {
 
 // handleListProducts handles GET /api/v1/products
 func (s *Server) handleListProducts(c echo.Context) error {
+	c.Logger().Info("List products requested")
+
 	var req ListProductsRequest
 
 	// Bind query parameters
 	if err := c.Bind(&req); err != nil {
+		c.Logger().Errorf("Failed to bind query parameters: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Invalid query parameters",
 		})
@@ -86,10 +101,12 @@ func (s *Server) handleListProducts(c echo.Context) error {
 	}
 	req.Name = strings.TrimSpace(req.Name)
 
+	c.Logger().Infof("Listing products with filters - limit: %d, offset: %d, name: '%s'", req.Limit, req.Offset, req.Name)
+
 	// Get products from service
 	products, err := s.InventorySvc.ListProducts(c.Request().Context(), req.Limit, req.Offset, req.Name)
 	if err != nil {
-		c.Logger().Error("Failed to list products: ", err)
+		c.Logger().Errorf("Failed to list products: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to retrieve products",
 		})
@@ -100,7 +117,7 @@ func (s *Server) handleListProducts(c echo.Context) error {
 	// the service to return both results and total count in one call
 	allProducts, err := s.InventorySvc.ListProducts(c.Request().Context(), 1000, 0, req.Name)
 	if err != nil {
-		c.Logger().Error("Failed to get total count: ", err)
+		c.Logger().Errorf("Failed to get total count: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to retrieve product count",
 		})
@@ -117,6 +134,7 @@ func (s *Server) handleListProducts(c echo.Context) error {
 	hasFilter := req.Name != ""
 	s.BusinessMetrics.RecordProductsListed(len(products), hasFilter)
 
+	c.Logger().Infof("Successfully listed %d products (total: %d, filtered: %t)", len(products), len(allProducts), hasFilter)
 	return c.JSON(http.StatusOK, response)
 }
 
@@ -181,19 +199,23 @@ func convertFieldName(fieldName string) string {
 
 // handleCreateProduct handles POST /api/v1/products
 func (s *Server) handleCreateProduct(c echo.Context) error {
+	c.Logger().Info("Create product requested")
+
 	var req CreateProductRequest
 
 	// Bind JSON request body
 	if err := c.Bind(&req); err != nil {
-		c.Logger().Error("Failed to bind product data: ", err)
+		c.Logger().Errorf("Failed to bind product data: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Invalid JSON format. Please check your request body.",
 		})
 	}
 
+	c.Logger().Debugf("Product creation request - name: '%s', price: %d, quantity: %d", req.Name, req.PriceCents, req.Quantity)
+
 	// Validate using Echo's built-in validator
 	if err := c.Validate(req); err != nil {
-		c.Logger().Error("Product validation failed: ", err)
+		c.Logger().Errorf("Product validation failed: %v", err)
 
 		// Record validation error metrics
 		s.BusinessMetrics.RecordValidationError("create", "multiple")
@@ -216,7 +238,7 @@ func (s *Server) handleCreateProduct(c echo.Context) error {
 	// Create product via service
 	created, err := s.InventorySvc.CreateProduct(c.Request().Context(), product)
 	if err != nil {
-		c.Logger().Error("Failed to create product: ", err)
+		c.Logger().Errorf("Failed to create product '%s': %v", product.Name, err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
@@ -226,15 +248,19 @@ func (s *Server) handleCreateProduct(c echo.Context) error {
 	s.BusinessMetrics.RecordProductCreated(created.Name)
 	s.BusinessMetrics.RecordInventoryLevel(created.ID, created.Quantity)
 
+	c.Logger().Infof("Successfully created product - ID: %s, Name: '%s', Price: %d, Quantity: %d",
+		created.ID, created.Name, created.PriceCents, created.Quantity)
 	return c.JSON(http.StatusCreated, created)
 }
 
 // handleGetProduct handles GET /api/v1/products/:id
 func (s *Server) handleGetProduct(c echo.Context) error {
 	id := c.Param("id")
+	c.Logger().Infof("Get product requested - ID: %s", id)
 
 	// Validate ID parameter
 	if strings.TrimSpace(id) == "" {
+		c.Logger().Warn("Get product request with empty ID")
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Product ID is required",
 		})
@@ -243,7 +269,7 @@ func (s *Server) handleGetProduct(c echo.Context) error {
 	// Get product from service
 	product, err := s.InventorySvc.GetProduct(c.Request().Context(), id)
 	if err != nil {
-		c.Logger().Error("Failed to get product: ", err)
+		c.Logger().Errorf("Failed to get product ID '%s': %v", id, err)
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"error": "Product not found",
 		})
@@ -252,6 +278,7 @@ func (s *Server) handleGetProduct(c echo.Context) error {
 	// Record business metrics
 	s.BusinessMetrics.RecordProductViewed(product.ID)
 
+	c.Logger().Infof("Successfully retrieved product - ID: %s, Name: '%s'", product.ID, product.Name)
 	return c.JSON(http.StatusOK, product)
 }
 
@@ -266,9 +293,11 @@ type UpdateProductRequest struct {
 // handleUpdateProduct handles PUT /api/v1/products/:id
 func (s *Server) handleUpdateProduct(c echo.Context) error {
 	id := c.Param("id")
+	c.Logger().Infof("Update product requested - ID: %s", id)
 
 	// Validate ID parameter
 	if strings.TrimSpace(id) == "" {
+		c.Logger().Warn("Update product request with empty ID")
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Product ID is required",
 		})
@@ -278,15 +307,18 @@ func (s *Server) handleUpdateProduct(c echo.Context) error {
 
 	// Bind JSON request body
 	if err := c.Bind(&req); err != nil {
-		c.Logger().Error("Failed to bind product data: ", err)
+		c.Logger().Errorf("Failed to bind product data for ID '%s': %v", id, err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Invalid JSON format. Please check your request body.",
 		})
 	}
 
+	c.Logger().Debugf("Product update request - ID: %s, name: '%s', price: %d, quantity: %d",
+		id, req.Name, req.PriceCents, req.Quantity)
+
 	// Validate using Echo's built-in validator
 	if err := c.Validate(req); err != nil {
-		c.Logger().Error("Product validation failed: ", err)
+		c.Logger().Errorf("Product validation failed for ID '%s': %v", id, err)
 
 		// Record validation error metrics
 		s.BusinessMetrics.RecordValidationError("update", "multiple")
@@ -308,7 +340,7 @@ func (s *Server) handleUpdateProduct(c echo.Context) error {
 	// Update product via service
 	updated, err := s.InventorySvc.UpdateProduct(c.Request().Context(), id, product)
 	if err != nil {
-		c.Logger().Error("Failed to update product: ", err)
+		c.Logger().Errorf("Failed to update product ID '%s': %v", id, err)
 
 		// Determine appropriate HTTP status code
 		status := http.StatusBadRequest
@@ -325,15 +357,19 @@ func (s *Server) handleUpdateProduct(c echo.Context) error {
 	s.BusinessMetrics.RecordProductUpdated(updated.ID)
 	s.BusinessMetrics.RecordInventoryLevel(updated.ID, updated.Quantity)
 
+	c.Logger().Infof("Successfully updated product - ID: %s, Name: '%s', Price: %d, Quantity: %d",
+		updated.ID, updated.Name, updated.PriceCents, updated.Quantity)
 	return c.JSON(http.StatusOK, updated)
 }
 
 // handleDeleteProduct handles DELETE /api/v1/products/:id
 func (s *Server) handleDeleteProduct(c echo.Context) error {
 	id := c.Param("id")
+	c.Logger().Infof("Delete product requested - ID: %s", id)
 
 	// Validate ID parameter
 	if strings.TrimSpace(id) == "" {
+		c.Logger().Warn("Delete product request with empty ID")
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Product ID is required",
 		})
@@ -341,7 +377,7 @@ func (s *Server) handleDeleteProduct(c echo.Context) error {
 
 	// Delete product via service
 	if err := s.InventorySvc.DeleteProduct(c.Request().Context(), id); err != nil {
-		c.Logger().Error("Failed to delete product: ", err)
+		c.Logger().Errorf("Failed to delete product ID '%s': %v", id, err)
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"error": "Product not found",
 		})
@@ -350,5 +386,6 @@ func (s *Server) handleDeleteProduct(c echo.Context) error {
 	// Record business metrics
 	s.BusinessMetrics.RecordProductDeleted(id)
 
+	c.Logger().Infof("Successfully deleted product - ID: %s", id)
 	return c.NoContent(http.StatusNoContent)
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lee/BidOne/pkg/model"
+	"github.com/lee/BidOne/shared/types/model"
 )
 
 var (
