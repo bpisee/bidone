@@ -119,6 +119,102 @@ go test -v -bench=. ./...
 go test -v ./services/
 go test -v ./store/
 ```
+#### Test Result
+```bash
+# Run all tests
+go test ./...
+
+=== RUN   TestCreateAndListProducts
+--- PASS: TestCreateAndListProducts (0.00s)
+=== RUN   TestServiceLayerIntegration
+--- PASS: TestServiceLayerIntegration (0.00s)
+=== RUN   TestHealthCheck
+--- PASS: TestHealthCheck (0.00s)
+=== RUN   TestCreateProductValidation
+=== RUN   TestCreateProductValidation/Valid_product_creation
+=== RUN   TestCreateProductValidation/Missing_name
+{"time":"2025-09-22T23:36:15.611878+12:00","level":"ERROR","prefix":"echo","file":"httphandler.go","line":"218","message":"Product validation failed: Key: 'CreateProductRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag"}
+=== RUN   TestCreateProductValidation/Empty_name
+{"time":"2025-09-22T23:36:15.6129516+12:00","level":"ERROR","prefix":"echo","file":"httphandler.go","line":"218","message":"Product validation failed: Key: 'CreateProductRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag"}
+=== RUN   TestCreateProductValidation/Whitespace_only_name
+{"time":"2025-09-22T23:36:15.6129516+12:00","level":"ERROR","prefix":"echo","file":"httphandler.go","line":"241","message":"Failed to create product '': name must not be empty"}=== RUN   TestCreateProductValidation/Negative_price
+{"time":"2025-09-22T23:36:15.6129516+12:00","level":"ERROR","prefix":"echo","file":"httphandler.go","line":"218","message":"Product validation failed: Key: 'CreateProductRequest.PriceCents' Error:Field validation for 'PriceCents' failed on the 'min' tag"}
+=== RUN   TestCreateProductValidation/Negative_quantity
+{"time":"2025-09-22T23:36:15.6129516+12:00","level":"ERROR","prefix":"echo","file":"httphandler.go","line":"218","message":"Product validation failed: Key: 'CreateProductRequest.Quantity' Error:Field validation for 'Quantity' failed on the 'min' tag"}
+=== RUN   TestCreateProductValidation/Multiple_validation_errors
+{"time":"2025-09-22T23:36:15.6134816+12:00","level":"ERROR","prefix":"echo","file":"httphandler.go","line":"218","message":"Product validation failed: Key: 'CreateProductRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag\nKey: 'CreateProductRequest.PriceCents' Error:Field validation for 'PriceCents' failed on the 'min' tag\nKey: 'CreateProductRequest.Quantity' Error:Field validation for 'Quantity' failed on the 'min' tag"}
+=== RUN   TestCreateProductValidation/Zero_values_(should_be_valid)
+=== RUN   TestCreateProductValidation/With_description
+--- PASS: TestCreateProductValidation (0.00s)
+    --- PASS: TestCreateProductValidation/Valid_product_creation (0.00s)
+    --- PASS: TestCreateProductValidation/Missing_name (0.00s)
+    --- PASS: TestCreateProductValidation/Empty_name (0.00s)
+    --- PASS: TestCreateProductValidation/Whitespace_only_name (0.00s)
+    --- PASS: TestCreateProductValidation/Negative_price (0.00s)
+    --- PASS: TestCreateProductValidation/Negative_quantity (0.00s)
+    --- PASS: TestCreateProductValidation/Multiple_validation_errors (0.00s)
+    --- PASS: TestCreateProductValidation/Zero_values_(should_be_valid) (0.00s)
+    --- PASS: TestCreateProductValidation/With_description (0.00s)
+PASS
+ok      github.com/lee/BidOne/apps/inventorysvc 0.396s
+=== RUN   TestNewInventoryService
+--- PASS: TestNewInventoryService (0.00s)
+=== RUN   TestInventoryService_CreateProduct
+=== RUN   TestInventoryService_CreateProduct/ValidProduct
+=== RUN   TestInventoryService_CreateProduct/InvalidProduct
+=== RUN   TestInventoryService_CreateProduct/NegativePrice
+=== RUN   TestInventoryService_CreateProduct/NegativeQuantity
+--- PASS: TestInventoryService_CreateProduct (0.00s)
+    --- PASS: TestInventoryService_CreateProduct/ValidProduct (0.00s)
+    --- PASS: TestInventoryService_CreateProduct/InvalidProduct (0.00s)
+    --- PASS: TestInventoryService_CreateProduct/NegativePrice (0.00s)
+    --- PASS: TestInventoryService_CreateProduct/NegativeQuantity (0.00s)
+=== RUN   TestInventoryService_GetProduct
+=== RUN   TestInventoryService_GetProduct/ExistingProduct
+=== RUN   TestInventoryService_GetProduct/NonExistentProduct
+--- PASS: TestInventoryService_GetProduct (0.00s)
+    --- PASS: TestInventoryService_GetProduct/ExistingProduct (0.00s)
+    --- PASS: TestInventoryService_GetProduct/NonExistentProduct (0.00s)
+=== RUN   TestInventoryService_UpdateProduct
+=== RUN   TestInventoryService_UpdateProduct/ValidUpdate
+=== RUN   TestInventoryService_UpdateProduct/NonExistentProduct
+=== RUN   TestInventoryService_UpdateProduct/InvalidUpdate
+--- PASS: TestInventoryService_UpdateProduct (0.00s)
+    --- PASS: TestInventoryService_UpdateProduct/ValidUpdate (0.00s)
+    --- PASS: TestInventoryService_UpdateProduct/NonExistentProduct (0.00s)
+    --- PASS: TestInventoryService_UpdateProduct/InvalidUpdate (0.00s)
+=== RUN   TestInventoryService_DeleteProduct
+=== RUN   TestInventoryService_DeleteProduct/ExistingProduct
+=== RUN   TestInventoryService_DeleteProduct/NonExistentProduct
+--- PASS: TestInventoryService_DeleteProduct (0.00s)
+    --- PASS: TestInventoryService_DeleteProduct/ExistingProduct (0.00s)
+    --- PASS: TestInventoryService_DeleteProduct/NonExistentProduct (0.00s)
+=== RUN   TestInventoryService_ListProducts
+=== RUN   TestInventoryService_ListProducts/ListAllProducts
+=== RUN   TestInventoryService_ListProducts/PaginationLimit
+=== RUN   TestInventoryService_ListProducts/PaginationOffset
+=== RUN   TestInventoryService_ListProducts/NameFiltering
+=== RUN   TestInventoryService_ListProducts/CaseInsensitiveFiltering
+=== RUN   TestInventoryService_ListProducts/NoMatchesFilter
+=== RUN   TestInventoryService_ListProducts/DefaultLimitValidation
+=== RUN   TestInventoryService_ListProducts/MaximumLimitValidation
+=== RUN   TestInventoryService_ListProducts/NegativeOffsetValidation
+=== RUN   TestInventoryService_ListProducts/OffsetBeyondResults
+--- PASS: TestInventoryService_ListProducts (0.00s)
+    --- PASS: TestInventoryService_ListProducts/ListAllProducts (0.00s)
+    --- PASS: TestInventoryService_ListProducts/PaginationLimit (0.00s)
+    --- PASS: TestInventoryService_ListProducts/PaginationOffset (0.00s)
+    --- PASS: TestInventoryService_ListProducts/NameFiltering (0.00s)
+    --- PASS: TestInventoryService_ListProducts/CaseInsensitiveFiltering (0.00s)
+    --- PASS: TestInventoryService_ListProducts/NoMatchesFilter (0.00s)
+    --- PASS: TestInventoryService_ListProducts/DefaultLimitValidation (0.00s)
+    --- PASS: TestInventoryService_ListProducts/MaximumLimitValidation (0.00s)
+    --- PASS: TestInventoryService_ListProducts/NegativeOffsetValidation (0.00s)
+    --- PASS: TestInventoryService_ListProducts/OffsetBeyondResults (0.00s)
+PASS
+ok      github.com/lee/BidOne/apps/inventorysvc/services        2.282s
+
+```
 
 #### From the root go directory (`go/`)
 ```bash
